@@ -684,6 +684,7 @@ func (m *manager) GetRequestedContainersInfo(containerName string, options v2.Re
 	if err != nil {
 		return nil, err
 	}
+	klog.Infof("##2 Collect containers %d", len(containers))
 	var errs partialFailure
 	containersMap := make(map[string]*info.ContainerInfo)
 	query := info.ContainerInfoRequest{
