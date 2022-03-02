@@ -294,6 +294,7 @@ func (m *manager) Start() error {
 	}
 
 	// Create root and then recover all containers.
+	klog.Infof("##5 Try to add all containers")
 	err = m.createContainer("/", watcher.Raw)
 	if err != nil {
 		return err
@@ -589,11 +590,13 @@ func (m *manager) getAllDockerContainers() map[string]*containerData {
 	containers := make(map[string]*containerData, len(m.containers))
 
 	// Get containers in the Docker namespace.
+	klog.Infof("##3 Collect containers %d", len(m.containers))
 	for name, cont := range m.containers {
 		if name.Namespace == docker.DockerNamespace {
 			containers[cont.info.Name] = cont
 		}
 	}
+	klog.Infof("##4 Collect containers %d", len(containers))
 	return containers
 }
 
@@ -684,6 +687,7 @@ func (m *manager) GetRequestedContainersInfo(containerName string, options v2.Re
 	if err != nil {
 		return nil, err
 	}
+	klog.Infof("##2 Collect containers %d", len(containers))
 	var errs partialFailure
 	containersMap := make(map[string]*info.ContainerInfo)
 	query := info.ContainerInfoRequest{
@@ -988,7 +992,7 @@ func (m *manager) createContainerLocked(containerName string, watchSource watche
 		}] = cont
 	}
 
-	klog.V(3).Infof("Added container: %q (aliases: %v, namespace: %q)", containerName, cont.info.Aliases, cont.info.Namespace)
+	klog.Infof("Added container: %q (aliases: %v, namespace: %q)", containerName, cont.info.Aliases, cont.info.Namespace)
 
 	contSpec, err := cont.handler.GetSpec()
 	if err != nil {
@@ -1045,7 +1049,7 @@ func (m *manager) destroyContainerLocked(containerName string) error {
 			Name:      alias,
 		})
 	}
-	klog.V(3).Infof("Destroyed container: %q (aliases: %v, namespace: %q)", containerName, cont.info.Aliases, cont.info.Namespace)
+	klog.Infof("Destroyed container: %q (aliases: %v, namespace: %q)", containerName, cont.info.Aliases, cont.info.Namespace)
 
 	contRef, err := cont.handler.ContainerReference()
 	if err != nil {
@@ -1122,6 +1126,7 @@ func (m *manager) detectSubcontainers(containerName string) error {
 
 	// Add the new containers.
 	for _, cont := range added {
+		klog.Infof("##6 Try to add container %s, %s", cont.Name, cont.Namespace)
 		err = m.createContainer(cont.Name, watcher.Raw)
 		if err != nil {
 			klog.Errorf("Failed to create existing container: %s: %s", cont.Name, err)
@@ -1130,6 +1135,7 @@ func (m *manager) detectSubcontainers(containerName string) error {
 
 	// Remove the old containers.
 	for _, cont := range removed {
+		klog.Infof("##8 Try to remove container %s, %s", cont.Name, cont.Namespace)
 		err = m.destroyContainer(cont.Name)
 		if err != nil {
 			klog.Errorf("Failed to destroy existing container: %s: %s", cont.Name, err)
@@ -1171,9 +1177,11 @@ func (m *manager) watchForNewContainers(quit chan error) error {
 				case event.EventType == watcher.ContainerAdd:
 					switch event.WatchSource {
 					default:
+						klog.Infof("##7 Try to add container %s, %d", event.Name, event.WatchSource)
 						err = m.createContainer(event.Name, event.WatchSource)
 					}
 				case event.EventType == watcher.ContainerDelete:
+					klog.Infof("##9 Try to remove container %s", event.Name)
 					err = m.destroyContainer(event.Name)
 				}
 				if err != nil {
